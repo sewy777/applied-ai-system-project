@@ -24,7 +24,7 @@ class UserProfile:
     favorite_genre: str
     favorite_mood: str
     target_energy: float
-    likes_acoustic: bool
+    likes_acoustic: bool  # reserved for future acoustic scoring; not used in current scoring logic
 
 
 class Recommender:
