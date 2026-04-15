@@ -17,17 +17,56 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world platforms like Spotify or TikTok use two main approaches to figure out what you'll want to listen to next. The first is **collaborative filtering** — basically, "people who liked what you liked also liked this, so you probably will too." It's based on patterns across users, not the music itself. The second is **content-based filtering** — it looks at the actual attributes of a song (like genre, energy level, or mood) and compares them directly to what the user prefers. Our simulation uses content-based filtering because we have song data but no real user behavior to learn from.
 
-Some prompts to answer:
+The way it works is pretty straightforward: for every song in the catalog, we calculate a score based on how well it matches the user's taste profile. Songs that match the genre get more points, songs that match the mood get some points, and songs that are close to the user's target energy level get a similarity bonus. Then we sort everything by score and return the top results.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+**Algorithm Recipe (scoring rules):**
+- +2.0 points for a genre match
+- +1.0 point for a mood match
+- Up to +1.0 point for energy similarity — calculated as `1 - abs(song_energy - target_energy)`, so closer = higher score
 
-You can include a simple diagram or bullet list if helpful.
+**Song features used in the simulation:**
+- `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`
+
+**UserProfile features used:**
+- `favorite_genre`, `favorite_mood`, `target_energy`
+
+**Example user profile dictionary:**
+```python
+user_prefs = {
+    "genre": "pop",
+    "mood": "happy",
+    "energy": 0.8
+}
+```
+
+**Data flow diagram:**
+
+```mermaid
+flowchart TD
+    A["User Preferences\n(genre, mood, target_energy)"] --> B["Load all songs from songs.csv"]
+    B --> C["For each song in the catalog..."]
+    C --> D{"Genre matches\nuser preference?"}
+    D -->|Yes| E["+2.0 points"]
+    D -->|No| F["+0 points"]
+    E --> G{"Mood matches\nuser preference?"}
+    F --> G
+    G -->|Yes| H["+1.0 point"]
+    G -->|No| I["+0 points"]
+    H --> J["Energy similarity score\n1 - abs(song_energy - target_energy)"]
+    I --> J
+    J --> K["Total score for this song"]
+    K --> C
+    C --> L["All songs scored"]
+    L --> M["Sort all scores highest to lowest"]
+    M --> N["Return top K recommendations"]
+```
+
+**Potential biases to watch for:**
+- Genre is worth 2x more than mood, so a song with a matching genre will almost always outrank one that only matches mood — even if the mood match is a better fit for the user's vibe
+- The original catalog had 3 lofi songs and 2 pop songs, so those genres naturally had more chances to score well before we expanded the dataset
+- Energy similarity is a small bonus (max +1.0), so it doesn't do much to separate songs once genre and mood are already matched
 
 ---
 
@@ -63,6 +102,39 @@ pytest
 ```
 
 You can add more tests in `tests/test_recommender.py`.
+
+---
+
+## Sample Terminal Output
+
+Running `python -m src.main` with the default pop/happy profile (energy: 0.8):
+
+```
+Loaded songs: 18
+
+Top recommendations:
+
+--------------------------------------------------
+1. Sunrise City by Neon Echo
+   Score : 3.98
+   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.98)
+
+2. Gym Hero by Max Pulse
+   Score : 2.87
+   Why   : genre match (+2.0), energy similarity (+0.87)
+
+3. Rooftop Lights by Indigo Parade
+   Score : 1.96
+   Why   : mood match (+1.0), energy similarity (+0.96)
+
+4. Night Drive Loop by Neon Echo
+   Score : 0.95
+   Why   : energy similarity (+0.95)
+
+5. Neighborhood Kid by Block Theory
+   Score : 0.92
+   Why   : energy similarity (+0.92)
+```
 
 ---
 
