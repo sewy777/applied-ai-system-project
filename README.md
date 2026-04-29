@@ -173,7 +173,27 @@ Honestly the part that surprised me most wasn't the algorithm — it was the tes
 
 The confidence scores being 99%+ for almost every good match was also unexpected. I thought the numbers would be more spread out. But it makes sense in hindsight — once genre matches, the scoring formula is basically locked in. That's not wrong, it just shows that genre is doing way more work than mood or energy, which is something I'd fix if I kept building this out.
 
-See [model_card.md](model_card.md) for the full ethics reflection and bias documentation.
+---
+
+## Reflection and Ethics
+
+**What are the limitations or biases in your system?**
+
+Genre dominates every result because it's worth +2.0 points while mood is only +1.0. A song that perfectly matches your mood and energy but is the wrong genre will almost always lose. The catalog is also only 18 songs, so genres with just one track (like classical or metal) run out of real options immediately — the system can't tell you "I don't have a good match," it just returns whatever is closest.
+
+**Could your AI be misused, and how would you prevent that?**
+
+In its current form it's low-risk, but the same design at scale could create filter bubbles — users who like pop would only ever see pop, never discovering anything new. To prevent that I'd add a diversity rule (no more than 2 songs from the same genre in the top 5) and add a small randomness factor. The input validation is also a basic safeguard — without it, bad inputs would silently produce wrong results instead of a clear error.
+
+**What surprised you while testing your AI's reliability?**
+
+I expected confidence scores to vary a lot, but almost every well-matched profile came back at 99%+. It made me realize the scoring formula is nearly deterministic once genre matches — mood and energy barely move the needle after that. Writing tests also forced me to think about edge cases I wouldn't have caught otherwise, like what happens when energy is out of range.
+
+**AI collaboration — one helpful suggestion, one flawed suggestion:**
+
+A helpful suggestion was raising separate `ValueError` messages for each type of bad input (empty genre, empty mood, out-of-range energy) instead of one generic error — that made debugging much easier. A flawed suggestion was an early version of the confidence calculation that divided by the top result's score instead of the fixed maximum of 4.0, which would have made every top result show 100% confidence regardless of how poor the match was. I had to spot and fix that myself.
+
+See [model_card.md](model_card.md) for the full bias analysis and documentation.
 
 ---
 
