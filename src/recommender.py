@@ -8,7 +8,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.FileHandler("recommender.log"),
-        logging.StreamHandler(),
     ],
 )
 logger = logging.getLogger(__name__)
@@ -48,6 +47,13 @@ class Recommender:
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
         """Returns the top k songs ranked by how well they match the user's taste profile."""
+        if not user.favorite_genre:
+            raise ValueError("UserProfile must have a non-empty favorite_genre")
+        if not user.favorite_mood:
+            raise ValueError("UserProfile must have a non-empty favorite_mood")
+        if not (0.0 <= user.target_energy <= 1.0):
+            raise ValueError(f"target_energy must be between 0.0 and 1.0, got {user.target_energy}")
+
         def _score(song: Song) -> float:
             score = 0.0
             if song.genre == user.favorite_genre:
@@ -154,5 +160,5 @@ def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tup
         scored.append((song, score, explanation, conf))
 
     results = sorted(scored, key=lambda x: x[1], reverse=True)[:k]
-    logger.info("Top result: '%s' (score=%.2f, confidence=%.1f%%)", results[0][0]["title"], results[0][1], results[0][3])
+    logger.info("Top result: '%s' (score=%.2f, confidence=%.1f%%)", results[0][0].get("title", "unknown"), results[0][1], results[0][3])
     return results

@@ -2,7 +2,7 @@
 
 ## 1. Model Name  
 
-**VibeFinder 1.0**
+**VibeFinder 2.0**
 
 ---
 
@@ -72,16 +72,16 @@ I also ran a weight shift experiment: I halved the genre weight (+2.0 → +1.0) 
 
 **What are the limitations or biases in your system?**
 
-The biggest limitation is that genre dominates every result. Because a genre match gives +2.0 points and a mood match only gives +1.0, the system basically treats genre as a hard filter — a song that perfectly matches your mood and energy but is in a slightly different genre will almost always lose. The catalog is also only 18 songs, so genres with just one track (like classical or metal) have almost no real competition. The system also doesn't understand what a song actually sounds like — it only sees labels and numbers, so it has no way to catch cases where the label is wrong or misleading.
+The biggest problem is that genre basically runs everything. Genre gives +2.0 points, mood only gives +1.0, so a song that perfectly matches your mood and energy but is the wrong genre will almost always lose. I noticed this with the "Gym Hero" track — it kept showing up near the top of the High-Energy Pop list even though it's tagged as "intense," not "happy," just because it's pop. Also the catalog only has 18 songs, so if you pick a genre with one track (like classical or metal), the system runs out of real options really fast and just starts picking things based on energy alone. It can't tell you "I don't have anything great for you" — it just hands you whatever's closest, even if it's not close at all.
 
 **Could your AI be misused, and how would you prevent that?**
 
-In its current form the system is low-risk — it's just song recommendations from a small fixed catalog. But the same design pattern scales up, and at scale, a genre-heavy recommender could create filter bubbles: a user who likes pop gets only pop forever, which pushes them away from discovering anything new. To prevent this, you'd add a diversity rule (no more than 2 songs from the same genre in the top 5) and mix in some randomness or exploration. The input validation added in this version is also a basic safeguard — it rejects bad inputs early rather than silently producing wrong results.
+Honestly, in this form it's pretty low-risk — it's just recommending songs from a tiny fixed catalog. But the same logic at a bigger scale could create a filter bubble problem. If genre is always worth double, users who like pop will basically only ever see pop, forever. They'd never discover anything outside their comfort zone. To fix that I'd add a diversity rule — something like "no more than 2 songs from the same genre in the top 5" — and maybe introduce a small random factor so the results aren't totally locked in every time. The input validation I added is also important — without it, if someone passes a broken energy value the system would just silently give bad results.
 
 **What surprised you while testing your AI's reliability?**
 
-The confidence scores were almost all above 99% for well-matched profiles, which I didn't expect. I thought there would be more spread. It showed me that when genre matches, the system is basically certain — and when it doesn't, the score drops sharply. The guardrail tests were also useful because I hadn't thought carefully about what happens when someone passes an energy value above 1.0 until I actually wrote the test for it. Testing found edge cases I hadn't considered.
+I expected the confidence scores to be more spread out, but almost every well-matched profile came back at 99%+. At first I thought that meant the system was really good, but then I realized it just means genre is doing basically all the work — once a genre match happens, the score jumps so high that mood and energy barely matter. The other thing that surprised me was how useful the guardrail tests were. I hadn't thought about what happens when someone passes an energy value above 1.0 until I actually sat down to write a test for it. Testing made me think about failure cases I would have completely missed otherwise.
 
 **Describe your collaboration with AI during this project. Identify one instance when the AI gave a helpful suggestion and one instance where its suggestion was flawed or incorrect.**
 
-I used AI assistance throughout this project. One helpful suggestion was the structure of the `validate_user_prefs` function — the AI suggested raising a `ValueError` with a specific message for each bad input rather than a generic error, which made the guardrails much clearer and easier to debug. One suggestion that was flawed was an early version of the confidence calculation that divided by the top score in the current results instead of the theoretical maximum (4.0). That would have made confidence relative to the best result in each run, so the top song would always show 100% regardless of how poor the match actually was. I caught it by thinking through what the number was supposed to mean and fixed it to use the fixed maximum instead.
+I used AI help throughout this project. One thing that was genuinely useful was the suggestion to raise a specific `ValueError` message for each type of bad input in `validate_user_prefs` — like separately handling missing genre, missing mood, and out-of-range energy. That made the guardrails a lot more useful when something actually went wrong because the error told you exactly what the problem was. One thing that was wrong though was an early version of the confidence calculation that divided the score by the highest score in the current results instead of the fixed maximum (4.0). That would have meant the top song always showed 100% confidence no matter how bad the match was, which defeats the whole purpose. I had to think it through myself to realize why that was wrong and switch it to use the theoretical maximum instead.

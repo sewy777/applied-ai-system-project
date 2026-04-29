@@ -25,6 +25,8 @@ The system has four main components:
 
 Data flow: User Preferences → Validate → Score every song → Rank by score → Return top K with confidence %
 
+![System Architecture](assets/architecture.png)
+
 ```mermaid
 flowchart TD
     A["User Preferences\n(genre, mood, target_energy)"] --> B["Validate Inputs\n(guardrails)"]
@@ -149,7 +151,7 @@ ValueError: 'energy' must be between 0.0 and 1.0, got 1.5
 
 ## Testing Summary
 
-**Unit tests (pytest):** 2/2 passed. These verify that the recommender returns songs sorted by score and that explanations are non-empty strings.
+**Unit tests (pytest):** 13/13 passed. These cover sorting correctness, explanation output, confidence calculation, input validation errors, and the functional API.
 
 **Evaluation harness (tests/evaluate.py):** 8/8 passed. Tests cover:
 - Correct genre returned first for pop, lofi, and rock profiles
@@ -159,17 +161,19 @@ ValueError: 'energy' must be between 0.0 and 1.0, got 1.5
 - Invalid energy (>1.0) raises a ValueError
 - Missing genre raises a ValueError
 
-Average top-result confidence: **99.5%**
+**Total across both test files: 21/21 tests passed.** Average top-result confidence: **99.5%**
 
-What worked well: the scoring logic is consistent — the same profile always returns the same results in the same order. What didn't work: confidence scores are very high (99%+) for well-matched profiles but drop sharply when no genre match exists, showing the genre weight dominates. What I learned: testing made the guardrails more important than the algorithm itself — bad inputs were the most likely failure point.
+What worked: the scoring logic is totally consistent — same profile always gives the same ranking. What didn't work as expected: confidence scores came back at 99%+ for almost every well-matched profile, which I didn't expect. I thought they'd spread out more. What I learned: testing made the guardrails feel more important than the algorithm — bad inputs were the most likely failure point.
 
 ---
 
 ## Reflection
 
-The biggest thing I learned from extending this project is that making an AI system *reliable* is a separate problem from making it *work*. The original recommender worked fine, but adding logging and input validation forced me to think about what happens when something goes wrong — not just when everything goes right.
+Honestly the part that surprised me most wasn't the algorithm — it was the testing. I assumed once the recommender was working it was basically done, but writing the guardrails and the test harness made me realize how easy it is to break something that looks fine on the surface. Like, I never thought about what happens if someone passes an energy of 1.5 until I actually wrote a test for it.
 
-Confidence scoring was also eye-opening. I expected the scores to spread out more, but most well-matched profiles came back at 99%+, which showed me that the scoring formula is almost deterministic once genre matches. That's not necessarily bad, but it confirms what the original model card said: genre acts more like a hard filter than one factor among several.
+The confidence scores being 99%+ for almost every good match was also unexpected. I thought the numbers would be more spread out. But it makes sense in hindsight — once genre matches, the scoring formula is basically locked in. That's not wrong, it just shows that genre is doing way more work than mood or energy, which is something I'd fix if I kept building this out.
+
+See [model_card.md](model_card.md) for the full ethics reflection and bias documentation.
 
 ---
 
