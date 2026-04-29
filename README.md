@@ -1,320 +1,181 @@
-# 🎵 Music Recommender Simulation
+# Applied AI System: Music Recommender
 
-## Project Summary
+## Original Project
 
-In this project you will build and explain a small music recommender system.
-
-Your goal is to:
-
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
-
-This project is a content-based music recommender built in Python. It loads a catalog of 18 songs from a CSV file, takes a user's preferred genre, mood, and energy level, and scores every song against those preferences using a simple weighted formula. The top 5 matches are returned with an explanation for why each one was recommended. The goal was to understand how platforms like Spotify decide what to play next — and to see where even a simple algorithm can produce results that actually feel right, and where it starts to fall apart.
+This project is an extension of **Module 3: Music Recommender Simulation** from CodePath AI 110. The original project built a content-based music recommender in Python that loaded a catalog of 18 songs from a CSV file, scored each song against a user's preferred genre, mood, and energy level using a weighted formula, and returned the top 5 matches with explanations. It ran entirely in the terminal as a CLI simulation.
 
 ---
 
-## How The System Works
+## Title and Summary
 
-Real-world platforms like Spotify or TikTok use two main approaches to figure out what you'll want to listen to next. The first is **collaborative filtering** — basically, "people who liked what you liked also liked this, so you probably will too." It's based on patterns across users, not the music itself. The second is **content-based filtering** — it looks at the actual attributes of a song (like genre, energy level, or mood) and compares them directly to what the user prefers. Our simulation uses content-based filtering because we have song data but no real user behavior to learn from.
+**VibeFinder 2.0** — a reliability-tested, content-based music recommender system.
 
-The way it works is pretty straightforward: for every song in the catalog, we calculate a score based on how well it matches the user's taste profile. Songs that match the genre get more points, songs that match the mood get some points, and songs that are close to the user's target energy level get a similarity bonus. Then we sort everything by score and return the top results.
+This system takes a user's taste profile (genre, mood, energy level) and recommends the top 5 matching songs from a catalog, with an explanation and confidence score for each result. The goal is to show how a simple scoring algorithm can produce meaningful recommendations — and to prove it actually works through logging, input validation, and an automated evaluation harness.
 
-**Algorithm Recipe (scoring rules):**
-- +2.0 points for a genre match
-- +1.0 point for a mood match
-- Up to +1.0 point for energy similarity — calculated as `1 - abs(song_energy - target_energy)`, so closer = higher score
+---
 
-**Song features used in the simulation:**
-- `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, `acousticness`
+## Architecture Overview
 
-**UserProfile features used:**
-- `favorite_genre`, `favorite_mood`, `target_energy`
+The system has four main components:
 
-**Example user profile dictionary:**
-```python
-user_prefs = {
-    "genre": "pop",
-    "mood": "happy",
-    "energy": 0.8
-}
-```
+1. **Data Layer** — `data/songs.csv` stores the song catalog (18 songs, 9 attributes each)
+2. **Logic Layer** — `src/recommender.py` handles input validation, scoring, confidence calculation, and logging
+3. **Runner** — `src/main.py` runs 5 test profiles and prints results to the terminal
+4. **Evaluator** — `tests/evaluate.py` runs 8 predefined test cases and prints a pass/fail summary
 
-**Data flow diagram:**
+Data flow: User Preferences → Validate → Score every song → Rank by score → Return top K with confidence %
 
 ```mermaid
 flowchart TD
-    A["User Preferences\n(genre, mood, target_energy)"] --> B["Load all songs from songs.csv"]
-    B --> C["For each song in the catalog..."]
-    C --> D{"Genre matches\nuser preference?"}
-    D -->|Yes| E["+2.0 points"]
-    D -->|No| F["+0 points"]
-    E --> G{"Mood matches\nuser preference?"}
-    F --> G
-    G -->|Yes| H["+1.0 point"]
-    G -->|No| I["+0 points"]
-    H --> J["Energy similarity score\n1 - abs(song_energy - target_energy)"]
-    I --> J
-    J --> K["Total score for this song"]
-    K --> C
-    C --> L["All songs scored"]
-    L --> M["Sort all scores highest to lowest"]
-    M --> N["Return top K recommendations"]
+    A["User Preferences\n(genre, mood, target_energy)"] --> B["Validate Inputs\n(guardrails)"]
+    B -->|Invalid| C["Raise ValueError\n+ log error"]
+    B -->|Valid| D["Load songs from songs.csv"]
+    D --> E["Score each song\n(genre +2.0, mood +1.0, energy similarity +1.0)"]
+    E --> F["Calculate Confidence %\n(score / 4.0 × 100)"]
+    F --> G["Sort all songs by score"]
+    G --> H["Return Top K Results\nwith explanation + confidence"]
+    H --> I["Log top result"]
+    H --> J["Evaluation Harness\ntests/evaluate.py\npass/fail summary"]
 ```
-
-**Potential biases to watch for:**
-- Genre is worth 2x more than mood, so a song with a matching genre will almost always outrank one that only matches mood — even if the mood match is a better fit for the user's vibe
-- The original catalog had 3 lofi songs and 2 pop songs, so those genres naturally had more chances to score well before we expanded the dataset
-- Energy similarity is a small bonus (max +1.0), so it doesn't do much to separate songs once genre and mood are already matched
 
 ---
 
-## Getting Started
+## Setup Instructions
 
-### Setup
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/sewy777/applied-ai-system-project.git
+   cd applied-ai-system-project
+   ```
 
-1. Create a virtual environment (optional but recommended):
-
+2. (Optional) Create a virtual environment:
    ```bash
    python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+   .venv\Scripts\activate        # Windows
+   source .venv/bin/activate     # Mac/Linux
+   ```
 
-2. Install dependencies
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+4. Run the recommender:
+   ```bash
+   python -m src.main
+   ```
 
-3. Run the app:
+5. Run the evaluation harness:
+   ```bash
+   python -m tests.evaluate
+   ```
 
-```bash
-python -m src.main
-```
-
-### Running Tests
-
-Run the starter tests with:
-
-```bash
-pytest
-```
-
-You can add more tests in `tests/test_recommender.py`.
-
----
-
-## Sample Terminal Output
-
-Running `python -m src.main` produces results for all 5 test profiles. Here's an example from the High-Energy Pop profile (see full outputs in the Experiments section below):
-
-```
-Loaded songs: 18
-
-==================================================
-Profile: High-Energy Pop
-Prefs  : {'genre': 'pop', 'mood': 'happy', 'energy': 0.85}
-==================================================
-1. Sunrise City by Neon Echo
-   Score : 3.97
-   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.97)
-
-2. Gym Hero by Max Pulse
-   Score : 2.92
-   Why   : genre match (+2.0), energy similarity (+0.92)
-
-3. Rooftop Lights by Indigo Parade
-   Score : 1.91
-   Why   : mood match (+1.0), energy similarity (+0.91)
-
-4. Storm Runner by Voltline
-   Score : 0.94
-   Why   : energy similarity (+0.94)
-
-5. Night Drive Loop by Neon Echo
-   Score : 0.90
-   Why   : energy similarity (+0.90)
-```
+6. Run unit tests:
+   ```bash
+   pytest
+   ```
 
 ---
 
-## Experiments You Tried
+## Sample Interactions
 
-### Profile: High-Energy Pop
+### Example 1 — High-Energy Pop profile
 
+**Input:**
+```python
+{"genre": "pop", "mood": "happy", "energy": 0.85}
 ```
-==================================================
-Profile: High-Energy Pop
-Prefs  : {'genre': 'pop', 'mood': 'happy', 'energy': 0.85}
-==================================================
+
+**Output:**
+```
 1. Sunrise City by Neon Echo
-   Score : 3.97
-   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.97)
+   Score      : 3.97
+   Confidence : 99.2%
+   Why        : genre match (+2.0), mood match (+1.0), energy similarity (+0.97)
 
 2. Gym Hero by Max Pulse
-   Score : 2.92
-   Why   : genre match (+2.0), energy similarity (+0.92)
-
-3. Rooftop Lights by Indigo Parade
-   Score : 1.91
-   Why   : mood match (+1.0), energy similarity (+0.91)
-
-4. Storm Runner by Voltline
-   Score : 0.94
-   Why   : energy similarity (+0.94)
-
-5. Night Drive Loop by Neon Echo
-   Score : 0.90
-   Why   : energy similarity (+0.90)
+   Score      : 2.92
+   Confidence : 73.0%
+   Why        : genre match (+2.0), energy similarity (+0.92)
 ```
 
-### Profile: Chill Lofi
+### Example 2 — Chill Lofi profile
 
+**Input:**
+```python
+{"genre": "lofi", "mood": "chill", "energy": 0.38}
 ```
-==================================================
-Profile: Chill Lofi
-Prefs  : {'genre': 'lofi', 'mood': 'chill', 'energy': 0.38}
-==================================================
+
+**Output:**
+```
 1. Library Rain by Paper Lanterns
-   Score : 3.97
-   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.97)
+   Score      : 3.97
+   Confidence : 99.2%
+   Why        : genre match (+2.0), mood match (+1.0), energy similarity (+0.97)
 
 2. Midnight Coding by LoRoom
-   Score : 3.96
-   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.96)
-
-3. Focus Flow by LoRoom
-   Score : 2.98
-   Why   : genre match (+2.0), energy similarity (+0.98)
-
-4. Spacewalk Thoughts by Orbit Bloom
-   Score : 1.90
-   Why   : mood match (+1.0), energy similarity (+0.90)
-
-5. Coffee Shop Stories by Slow Stereo
-   Score : 0.99
-   Why   : energy similarity (+0.99)
+   Score      : 3.96
+   Confidence : 99.0%
+   Why        : genre match (+2.0), mood match (+1.0), energy similarity (+0.96)
 ```
 
-### Profile: Deep Intense Rock
+### Example 3 — Invalid input (guardrail)
 
-```
-==================================================
-Profile: Deep Intense Rock
-Prefs  : {'genre': 'rock', 'mood': 'intense', 'energy': 0.92}
-==================================================
-1. Storm Runner by Voltline
-   Score : 3.99
-   Why   : genre match (+2.0), mood match (+1.0), energy similarity (+0.99)
-
-2. Gym Hero by Max Pulse
-   Score : 1.99
-   Why   : mood match (+1.0), energy similarity (+0.99)
-
-3. Iron Will by Shatter Point
-   Score : 1.95
-   Why   : mood match (+1.0), energy similarity (+0.95)
-
-4. Bass Drop Heaven by Circuit Breaker
-   Score : 0.97
-   Why   : energy similarity (+0.97)
-
-5. Sunrise City by Neon Echo
-   Score : 0.90
-   Why   : energy similarity (+0.90)
+**Input:**
+```python
+{"genre": "pop", "mood": "happy", "energy": 1.5}
 ```
 
-### Profile: High-Energy Classical (adversarial)
-
+**Output:**
 ```
-==================================================
-Profile: High-Energy Classical (adversarial)
-Prefs  : {'genre': 'classical', 'mood': 'euphoric', 'energy': 0.95}
-==================================================
-1. Morning Mist by Clara Voss
-   Score : 2.27
-   Why   : genre match (+2.0), energy similarity (+0.27)
-
-2. Bass Drop Heaven by Circuit Breaker
-   Score : 2.00
-   Why   : mood match (+1.0), energy similarity (+1.00)
-
-3. Gym Hero by Max Pulse
-   Score : 0.98
-   Why   : energy similarity (+0.98)
-
-4. Iron Will by Shatter Point
-   Score : 0.98
-   Why   : energy similarity (+0.98)
-
-5. Storm Runner by Voltline
-   Score : 0.96
-   Why   : energy similarity (+0.96)
-```
-
-### Profile: Sad EDM (adversarial)
-
-```
-==================================================
-Profile: Sad EDM (adversarial)
-Prefs  : {'genre': 'edm', 'mood': 'sad', 'energy': 0.9}
-==================================================
-1. Bass Drop Heaven by Circuit Breaker
-   Score : 2.95
-   Why   : genre match (+2.0), energy similarity (+0.95)
-
-2. Storm Runner by Voltline
-   Score : 0.99
-   Why   : energy similarity (+0.99)
-
-3. Gym Hero by Max Pulse
-   Score : 0.97
-   Why   : energy similarity (+0.97)
-
-4. Iron Will by Shatter Point
-   Score : 0.93
-   Why   : energy similarity (+0.93)
-
-5. Sunrise City by Neon Echo
-   Score : 0.92
-   Why   : energy similarity (+0.92)
-```
-
-### Weight Shift Experiment (genre +2.0 → +1.0, energy similarity doubled)
-
-When genre weight was halved and energy similarity doubled, middle rankings shifted noticeably. For High-Energy Pop, `Rooftop Lights` (mood match + high energy, wrong genre) climbed much closer to `Gym Hero` (genre match, wrong mood). The top spot didn't change, but the gap between 2nd and 3rd narrowed — showing that the original weights make genre act almost like a hard filter rather than one factor among several.
-
-```
-1. Sunrise City by Neon Echo    — Score: 3.94  (genre +1.0, mood +1.0, energy +1.94)
-2. Gym Hero by Max Pulse        — Score: 2.84  (genre +1.0, energy +1.84)
-3. Rooftop Lights by Indigo     — Score: 2.82  (mood +1.0, energy +1.82)  ← moved up
-4. Storm Runner by Voltline     — Score: 1.88  (energy +1.88)
-5. Night Drive Loop by Neon Echo— Score: 1.80  (energy +1.80)
+ValueError: 'energy' must be between 0.0 and 1.0, got 1.5
 ```
 
 ---
 
-## Limitations and Risks
+## Design Decisions
 
-- The catalog only has 18 songs, so genres with one track (like classical or metal) have almost no real competition — the system just defaults to energy similarity for the rest of the list
-- Genre gets +2.0 points while mood only gets +1.0, so the system basically treats genre as a hard filter even when a mood match would feel more accurate
-- The system doesn't understand lyrics, context, or how a song actually makes you feel — it only sees numbers and labels
-- If the same artist has multiple songs in a genre, they can both show up in the top 5 even if variety would be better
+- **Reliability as the core AI feature.** Rather than adding an external API, the most honest extension of the original project was to make the existing scoring system provably reliable — with logging, input validation, confidence scoring, and an automated test harness. This keeps the system self-contained and reproducible.
 
-See [model_card.md](model_card.md) for a deeper breakdown of bias and limitations.
+- **Confidence scoring.** Each recommendation now includes a confidence percentage calculated as `score / 4.0 × 100`. The max possible score is 4.0 (genre + mood + full energy match), so a score of 3.97 = 99.2% confidence. This makes the output more informative than a raw number.
+
+- **Input validation as a guardrail.** The `validate_user_prefs` function checks that genre and mood are non-empty and that energy is within 0.0–1.0 before any scoring runs. If inputs are bad, the system raises a clear error and logs it rather than silently producing wrong results.
+
+- **Logging to a file.** Every run writes to `recommender.log` so you can inspect what the system did after the fact. This is a basic but practical form of transparency.
+
+- **Trade-off: genre still dominates.** Genre is worth +2.0 while mood is +1.0. This was intentional in the original design and kept here — changing it would shift results significantly and is documented as a known limitation.
+
+---
+
+## Testing Summary
+
+**Unit tests (pytest):** 2/2 passed. These verify that the recommender returns songs sorted by score and that explanations are non-empty strings.
+
+**Evaluation harness (tests/evaluate.py):** 8/8 passed. Tests cover:
+- Correct genre returned first for pop, lofi, and rock profiles
+- Results are always sorted highest-to-lowest
+- Top result confidence exceeds 50%
+- Exactly 5 results returned by default
+- Invalid energy (>1.0) raises a ValueError
+- Missing genre raises a ValueError
+
+Average top-result confidence: **99.5%**
+
+What worked well: the scoring logic is consistent — the same profile always returns the same results in the same order. What didn't work: confidence scores are very high (99%+) for well-matched profiles but drop sharply when no genre match exists, showing the genre weight dominates. What I learned: testing made the guardrails more important than the algorithm itself — bad inputs were the most likely failure point.
 
 ---
 
 ## Reflection
 
-Read and complete `model_card.md`:
+The biggest thing I learned from extending this project is that making an AI system *reliable* is a separate problem from making it *work*. The original recommender worked fine, but adding logging and input validation forced me to think about what happens when something goes wrong — not just when everything goes right.
 
-[**Model Card**](model_card.md)
+Confidence scoring was also eye-opening. I expected the scores to spread out more, but most well-matched profiles came back at 99%+, which showed me that the scoring formula is almost deterministic once genre matches. That's not necessarily bad, but it confirms what the original model card said: genre acts more like a hard filter than one factor among several.
 
-The biggest thing this project taught me is that recommender systems are less about complex AI and more about what you choose to measure and how much you weight each thing. Just picking genre, mood, and energy — and deciding genre is worth twice as much as mood — already shapes which songs "win" in ways that aren't always fair. I didn't expect such a small number change to matter so much until I actually ran the weight shift experiment and saw the rankings shift.
+---
 
-It also made me think differently about bias. The system isn't biased because it's broken — it's biased because of choices that seemed reasonable at design time, like giving genre more weight. That's the same thing that happens in real products, just at a much bigger scale. See [model_card.md](model_card.md) for the full reflection and documentation.
+## Limitations and Risks
 
-
-
+- Only 18 songs in the catalog — genres with one song have almost no real competition
+- Genre weight (+2.0) dominates the score, making it hard for mood or energy to change outcomes
+- No memory of past listens — every run starts fresh
+- See [model_card.md](model_card.md) for the full bias and ethics documentation

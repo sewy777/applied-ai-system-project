@@ -68,12 +68,20 @@ I also ran a weight shift experiment: I halved the genre weight (+2.0 → +1.0) 
 
 ---
 
-## 9. Personal Reflection  
+## 9. Reflection and Ethics
 
-Honestly the biggest thing I took away from this is how much the weight numbers matter. I thought writing the scoring function would be the hard part, but it wasn't — once I knew the recipe it came together pretty fast. What actually surprised me was running the weight shift experiment and seeing how much the rankings changed just from moving genre from 2.0 to 1.0. That one number basically controls whether genre acts like a hard filter or just one factor among several, and I didn't realize that until I saw it happen.
+**What are the limitations or biases in your system?**
 
-Using AI to help with the code saved a lot of time, especially for getting the structure of the functions right. But I did have to go back and check things myself — like making sure the CSV loader was actually converting the energy and tempo values to floats, not just leaving them as strings. The AI got the shape right but didn't always catch those kinds of subtle issues.
+The biggest limitation is that genre dominates every result. Because a genre match gives +2.0 points and a mood match only gives +1.0, the system basically treats genre as a hard filter — a song that perfectly matches your mood and energy but is in a slightly different genre will almost always lose. The catalog is also only 18 songs, so genres with just one track (like classical or metal) have almost no real competition. The system also doesn't understand what a song actually sounds like — it only sees labels and numbers, so it has no way to catch cases where the label is wrong or misleading.
 
-The thing that surprised me most is that even three simple rules can feel like real recommendations. When I ran the Chill Lofi profile and Library Rain and Midnight Coding came up first, it genuinely felt right — like it understood what I was going for. Which is kind of wild because it's literally just addition. I think that's the interesting part about simple systems — they work well enough in the right conditions that it's easy to forget how basic the logic actually is.
+**Could your AI be misused, and how would you prevent that?**
 
-If I kept building this out, I'd want to track what songs people actually skip or replay and use that to add some collaborative filtering on top. And I'd fix the diversity issue — right now you can easily get the same artist twice in the top 5 if they have multiple songs in a genre, and that just feels like a bug more than a feature.
+In its current form the system is low-risk — it's just song recommendations from a small fixed catalog. But the same design pattern scales up, and at scale, a genre-heavy recommender could create filter bubbles: a user who likes pop gets only pop forever, which pushes them away from discovering anything new. To prevent this, you'd add a diversity rule (no more than 2 songs from the same genre in the top 5) and mix in some randomness or exploration. The input validation added in this version is also a basic safeguard — it rejects bad inputs early rather than silently producing wrong results.
+
+**What surprised you while testing your AI's reliability?**
+
+The confidence scores were almost all above 99% for well-matched profiles, which I didn't expect. I thought there would be more spread. It showed me that when genre matches, the system is basically certain — and when it doesn't, the score drops sharply. The guardrail tests were also useful because I hadn't thought carefully about what happens when someone passes an energy value above 1.0 until I actually wrote the test for it. Testing found edge cases I hadn't considered.
+
+**Describe your collaboration with AI during this project. Identify one instance when the AI gave a helpful suggestion and one instance where its suggestion was flawed or incorrect.**
+
+I used AI assistance throughout this project. One helpful suggestion was the structure of the `validate_user_prefs` function — the AI suggested raising a `ValueError` with a specific message for each bad input rather than a generic error, which made the guardrails much clearer and easier to debug. One suggestion that was flawed was an early version of the confidence calculation that divided by the top score in the current results instead of the theoretical maximum (4.0). That would have made confidence relative to the best result in each run, so the top song would always show 100% regardless of how poor the match actually was. I caught it by thinking through what the number was supposed to mean and fixed it to use the fixed maximum instead.

@@ -1,12 +1,8 @@
 """
 Command line runner for the Music Recommender Simulation.
 
-This file helps you quickly run and test your recommender.
-
-Functions implemented in recommender.py:
-- load_songs
-- score_song
-- recommend_songs
+Run with:
+    python -m src.main
 """
 
 from .recommender import load_songs, recommend_songs
@@ -19,10 +15,11 @@ def print_recommendations(profile_name: str, user_prefs: dict, songs: list) -> N
     print(f"Profile: {profile_name}")
     print(f"Prefs  : {user_prefs}")
     print(f"{'=' * 50}")
-    for i, (song, score, explanation) in enumerate(recommendations, 1):
+    for i, (song, score, explanation, conf) in enumerate(recommendations, 1):
         print(f"{i}. {song['title']} by {song['artist']}")
-        print(f"   Score : {score:.2f}")
-        print(f"   Why   : {explanation}")
+        print(f"   Score      : {score:.2f}")
+        print(f"   Confidence : {conf:.1f}%")
+        print(f"   Why        : {explanation}")
         print()
 
 

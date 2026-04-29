@@ -1,6 +1,19 @@
 import csv
-from typing import List, Dict, Tuple, Optional
+import logging
+from typing import List, Dict, Tuple
 from dataclasses import dataclass
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("recommender.log"),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
+
+MAX_POSSIBLE_SCORE = 4.0  # genre(2.0) + mood(1.0) + energy_sim(1.0)
 
 
 @dataclass
@@ -61,17 +74,38 @@ class Recommender:
 def load_songs(csv_path: str) -> List[Dict]:
     """Loads songs from a CSV file and returns them as a list of dicts with numeric values converted."""
     songs = []
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            row["id"] = int(row["id"])
-            row["energy"] = float(row["energy"])
-            row["tempo_bpm"] = float(row["tempo_bpm"])
-            row["valence"] = float(row["valence"])
-            row["danceability"] = float(row["danceability"])
-            row["acousticness"] = float(row["acousticness"])
-            songs.append(dict(row))
+    try:
+        with open(csv_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row["id"] = int(row["id"])
+                row["energy"] = float(row["energy"])
+                row["tempo_bpm"] = float(row["tempo_bpm"])
+                row["valence"] = float(row["valence"])
+                row["danceability"] = float(row["danceability"])
+                row["acousticness"] = float(row["acousticness"])
+                songs.append(dict(row))
+        logger.info("Loaded %d songs from %s", len(songs), csv_path)
+    except FileNotFoundError:
+        logger.error("Song catalog not found: %s", csv_path)
+        raise
+    except Exception as e:
+        logger.error("Failed to load songs: %s", e)
+        raise
     return songs
+
+
+def validate_user_prefs(user_prefs: Dict) -> None:
+    """Raises ValueError if user preferences are missing or out of range."""
+    if not user_prefs.get("genre"):
+        raise ValueError("user_prefs must include a non-empty 'genre'")
+    if not user_prefs.get("mood"):
+        raise ValueError("user_prefs must include a non-empty 'mood'")
+    energy = user_prefs.get("energy")
+    if energy is None:
+        raise ValueError("user_prefs must include 'energy'")
+    if not (0.0 <= energy <= 1.0):
+        raise ValueError(f"'energy' must be between 0.0 and 1.0, got {energy}")
 
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
@@ -94,12 +128,31 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     return round(score, 2), reasons
 
 
-def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
-    """Scores every song and returns the top k as (song, score, explanation) sorted highest first."""
+def confidence(score: float) -> float:
+    """Returns a confidence percentage (0–100) based on how close a score is to the max possible."""
+    return round((score / MAX_POSSIBLE_SCORE) * 100, 1)
+
+
+def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str, float]]:
+    """
+    Scores every song and returns the top k as (song, score, explanation, confidence_pct)
+    sorted highest first. Validates user_prefs before running.
+    """
+    validate_user_prefs(user_prefs)
+    logger.info(
+        "Running recommendations for genre=%s, mood=%s, energy=%.2f",
+        user_prefs.get("genre"),
+        user_prefs.get("mood"),
+        user_prefs.get("energy", 0.0),
+    )
+
     scored = []
     for song in songs:
         score, reasons = score_song(user_prefs, song)
         explanation = ", ".join(reasons)
-        scored.append((song, score, explanation))
+        conf = confidence(score)
+        scored.append((song, score, explanation, conf))
 
-    return sorted(scored, key=lambda x: x[1], reverse=True)[:k]
+    results = sorted(scored, key=lambda x: x[1], reverse=True)[:k]
+    logger.info("Top result: '%s' (score=%.2f, confidence=%.1f%%)", results[0][0]["title"], results[0][1], results[0][3])
+    return results
