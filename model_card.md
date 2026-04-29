@@ -1,4 +1,4 @@
-# 🎧 Model Card: Music Recommender Simulation
+# 🎧 Model Card: VibeFinder 2.0 — Applied AI Music Recommender
 
 ## 1. Model Name  
 
@@ -8,7 +8,7 @@
 
 ## 2. Intended Use  
 
-VibeFinder 1.0 is designed to suggest songs from a small catalog based on a user's stated genre, mood, and energy preferences. It's meant for classroom exploration — specifically to show how a basic content-based recommender works from the inside. It assumes the user already knows what genre and mood they're in the mood for, which isn't always realistic.
+VibeFinder 2.0 is designed to suggest songs from a small catalog based on a user's stated genre, mood, and energy preferences. It's meant for classroom exploration — specifically to show how a basic content-based recommender works from the inside. It assumes the user already knows what genre and mood they're in the mood for, which isn't always realistic.
 
 **Not intended for:** real production use, real users with complex or changing tastes, or any situation where fairness or diversity across genres actually matters. It also shouldn't be used as a substitute for a proper music recommendation engine — the catalog is tiny and the scoring logic is intentionally simplified.
 

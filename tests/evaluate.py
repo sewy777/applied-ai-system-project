@@ -68,7 +68,7 @@ def run_harness():
     failed = 0
 
     print("\n" + "=" * 55)
-    print("  MUSIC RECOMMENDER — EVALUATION HARNESS")
+    print("  MUSIC RECOMMENDER - EVALUATION HARNESS")
     print("=" * 55)
 
     for i, case in enumerate(TEST_CASES, 1):
